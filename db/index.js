@@ -151,6 +151,27 @@ async function getPostsByUser (userId){
     }
 }
 
+/*--------------------tags--------------------*/
+async function createTags(taglist){
+    const setValues = taglist.map(
+        (value,index) => `($${index+1})`
+        ).join(',');
+
+
+    try{
+        const result = await client.query(`
+        INSERT INTO tags(name) 
+        VALUES ${setValues}
+        ON CONFLICT (name) DO NOTHING;;
+        `, [])
+        return result
+    }
+    catch(error){
+        throw error
+    }
+}
+
+
 
 /*--------------------export--------------------*/
 
