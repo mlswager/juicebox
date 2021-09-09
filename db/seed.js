@@ -1,173 +1,138 @@
-const {  
-    client,
-    createUser,
-    updateUser,
-    getAllUsers,
-    getUserById,
-    createPost,
-    updatePost,
-    getAllPosts,
-    getPostsByUser
-  } = require('./index');
-  
-  async function dropTables() {
-    try {
-      console.log("Starting to drop tables...");
-  
-      // have to make sure to drop in correct order
-      await client.query(`
-        DROP TABLE IF EXISTS posts;
-        DROP TABLE IF EXISTS users;
-      `);
-  
-      console.log("Finished dropping tables!");
-    } catch (error) {
-      console.error("Error dropping tables!");
-      throw error;
+
+//importing the database name and the functons we want to use from index.js
+const {client,getAllUsers,createUser,updateUser,createPost,updatePost,getAllPosts,getUserById,getPostsByUser} = require("./index")
+
+//use getAllUsers to look at what is in the database
+async function testDB(){
+    try{
+        const users = await getAllUsers()
+        console.log("getAllUsers: ",users)
+
+        const updateUserResult = await updateUser(users[0].id,{
+            name: "Bart Simpson",
+            location: "Springfield",
+            password: "3at-mY-5h0rt5"
+        })
+        console.log("user updated to: ",updateUserResult)
+
+        const getAllPostsResult = await getAllPosts()
+        console.log("getAllPosts: ",getAllPostsResult)
+
+        //console.log(`####${getAllPostsResult[0].authorId}`)
+
+        const updatePostResult = await updatePost(getAllPostsResult[0].authorId,{
+            title:"user1 updated post title",
+            content:"user1 updated post content. I should probably take a break"
+        })
+        console.log("post updated to: ",updatePostResult)
+
+        const getUser1Result = await getUserById(1)
+        console.log("getUser1ByIdResult: ",getUser1Result)
+        
     }
-  }
-  
-  async function createTables() {
-    try {
-      console.log("Starting to build tables...");
-  
-      await client.query(`
-        CREATE TABLE users (
-          id SERIAL PRIMARY KEY,
-          username varchar(255) UNIQUE NOT NULL,
-          password varchar(255) NOT NULL,
-          name varchar(255) NOT NULL,
-          location varchar(255) NOT NULL,
-          active boolean DEFAULT true
+    catch(error){
+        console.log(error)
+    }
+}
+
+//drop the users table and post table if it is in the database
+async function dropTables(){
+    try{
+        await client.query(`
+            DROP TABLE IF EXISTS posts;
+            DROP TABLE IF EXISTS users;`
         );
-        CREATE TABLE posts (
-          id SERIAL PRIMARY KEY,
-          "authorId" INTEGER REFERENCES users(id),
-          title varchar(255) NOT NULL,
-          content TEXT NOT NULL,
-          active BOOLEAN DEFAULT true
-        );
-      `);
-  
-      console.log("Finished building tables!");
-    } catch (error) {
-      console.error("Error building tables!");
-      throw error;
+        console.log("tables dropped");
+
     }
-  }
-  
-  async function createInitialUsers() {
-    try {
-      console.log("Starting to create users...");
-  
-      await createUser({ 
-        username: 'albert', 
-        password: 'bertie99',
-        name: 'Al Bert',
-        location: 'Sidney, Australia' 
-      });
-      await createUser({ 
-        username: 'sandra', 
-        password: '2sandy4me',
-        name: 'Just Sandra',
-        location: 'Ain\'t tellin\''
-      });
-      await createUser({ 
-        username: 'glamgal',
-        password: 'soglam',
-        name: 'Joshua',
-        location: 'Upper East Side'
-      });
-  
-      console.log("Finished creating users!");
-    } catch (error) {
-      console.error("Error creating users!");
-      throw error;
+    catch(error){
+        throw error
     }
-  }
-  
-  async function createInitialPosts() {
-    try {
-      const [albert, sandra, glamgal] = await getAllUsers();
-  
-      console.log("Starting to create posts...");
-      await createPost({
-        authorId: albert.id,
-        title: "First Post",
-        content: "This is my first post. I hope I love writing blogs as much as I love writing them."
-      });
-  
-      await createPost({
-        authorId: sandra.id,
-        title: "How does this work?",
-        content: "Seriously, does this even do anything?"
-      });
-  
-      await createPost({
-        authorId: glamgal.id,
-        title: "Living the Glam Life",
-        content: "Do you even? I swear that half of you are posing."
-      });
-      console.log("Finished creating posts!");
-    } catch (error) {
-      console.log("Error creating posts!");
-      throw error;
+    
+}
+
+//create the users table and posts table that we just dropped
+async function createTables(){
+    try{
+        await client.query(`
+            CREATE TABLE users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                location VARCHAR(255) NOT NULL,
+                active BOOLEAN DEFAULT true
+            );
+            CREATE TABLE posts (
+                id SERIAL PRIMARY KEY,
+                "authorId" INTEGER REFERENCES users(id) NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                active BOOLEAN DEFAULT true
+            );
+            `)
+        console.log("tables created")
+
     }
-  }
-  
-  async function rebuildDB() {
-    try {
-      client.connect();
-  
-      await dropTables();
-      await createTables();
-      await createInitialUsers();
-      await createInitialPosts();
-    } catch (error) {
-      console.log("Error during rebuildDB")
-      throw error;
+    catch(error){
+        throw error
     }
-  }
-  
-  async function testDB() {
-    try {
-      console.log("Starting to test database...");
-  
-      console.log("Calling getAllUsers");
-      const users = await getAllUsers();
-      console.log("Result:", users);
-  
-      console.log("Calling updateUser on users[0]");
-      const updateUserResult = await updateUser(users[0].id, {
-        name: "Newname Sogood",
-        location: "Lesterville, KY"
-      });
-      console.log("Result:", updateUserResult);
-  
-      console.log("Calling getAllPosts");
-      const posts = await getAllPosts();
-      console.log("Result:", posts);
-  
-      console.log("Calling updatePost on posts[0]");
-      const updatePostResult = await updatePost(posts[0].id, {
-        title: "New Title",
-        content: "Updated Content"
-      });
-      console.log("Result:", updatePostResult);
-  
-      console.log("Calling getUserById with 1");
-      const albert = await getUserById(1);
-      console.log("Result:", albert);
-  
-      console.log("Finished database tests!");
-    } catch (error) {
-      console.log("Error during testDB");
-      throw error;
+}
+
+//user createUsers to create an initial set of users. we pass in an object with 2 elements that is inserted into the users table
+async function createInitialUsers(){
+    try{
+        await createUser({usernameinput: "albert", passwordinput: "bertie99", nameinput: "albertname", locationinput: "albertlocation"})
+        await createUser({usernameinput: "sandra", passwordinput: "2sandy4me", nameinput: "sandyname", locationinput: "sandylocation"})  
+        await createUser({usernameinput: "glamgal", passwordinput: "soglam", nameinput: "glamgalname", locationinput: "glamgallocation"})
+
+        console.log("users created")
     }
-  }
-  
-  
-  rebuildDB()
+    catch(error){
+        console.log("error creating users")
+        throw(error)
+    }
+}
+
+/*-------------------------------------Post-------------------------------------*/
+
+
+async function createInitialPosts(){
+    try{
+        //this runs getAllUsers 3 times and assigns the results to the elements in the array
+        const[user1,user2,user3] = await getAllUsers();
+
+        await createPost({
+            authorId: user1.id,
+            title:"user1 first port",
+            content: "this is the first post for user1. I couldn't think of a username for Bart Simpson"
+        })
+        console.log("posts created")
+    }
+    catch(error){
+        throw error
+    }
+}
+
+
+
+
+
+/*-------------------------------------Rebuild-------------------------------------*/
+
+//a function that calls the drop and create functions that we can call
+async function rebuildTables(){
+    try{
+        client.connect()
+        await dropTables()
+        await createTables()
+        await createInitialUsers()
+        await createInitialPosts()
+    }
+    catch(error){
+        throw error
+    }
+}
+rebuildTables()
     .then(testDB)
-    .catch(console.error)
-    .finally(() => client.end());
+    .finally(()=>client.end())
